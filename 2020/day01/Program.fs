@@ -6,15 +6,19 @@ let readLines (filePath:string) = seq {
         yield sr.ReadLine () }
 
 let findTotal (targetTotal:int) xs =
-    let xs2 = xs
     xs
     |> Array.indexed
     |> Array.choose (fun (index,value) -> 
-        xs2
+        xs
         |> Array.skip index
-        |> Array.choose (fun x -> if x + value = targetTotal then Some x else None)
-        |> Array.tryHead
-        |> Option.map (fun x -> x,value))
+        |> Array.indexed
+        |> Array.choose (fun (index1,value1) ->
+            xs
+            |> Array.skip index1
+            |> Array.indexed
+            |> Array.choose (fun (index2,value2) -> if value + value1 + value2  = targetTotal then Some (value, value1, value2) else None)
+            |> Array.tryHead)
+        |> Array.tryHead)
     |> Array.tryHead
 
 [<EntryPoint>]
@@ -23,7 +27,7 @@ let main argv =
     let input = "input.txt" |> readLines |> Seq.map int |> Array.ofSeq
     input
     |> findTotal 2020
-    |> Option.map (fun (x,y) -> x * y)
+    |> Option.map (fun (x,y,z) -> x * y * z)
     |> Option.iter (printfn "Answer: %i")
 
     0
