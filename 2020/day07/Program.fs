@@ -31,21 +31,20 @@ let parse (line: string) =
 
 let canContain (bagMap: Map<string,Map<string,int>>) (bagColor: string) =
     let rec contains (parent: string) (child: string) =
-        let hasChildren = Map.tryFind parent bagMap
+        let hasChildren =
+            Map.tryFind parent bagMap
+            |> Option.bind (fun childMap -> if Map.isEmpty childMap then None else Some childMap)
         let isParentofChild =
             hasChildren
-            |> Option.bind(fun childMap ->
-                // printfn "checking children of %s" parent
-                Map.tryFindKey (fun s _ -> s = child) childMap)
+            |> Option.bind(fun childMap -> Map.tryFindKey (fun s _ -> s = child) childMap)
         match (isParentofChild, hasChildren) with
-        | (Some _, _) -> true
-        | (None, Some children) when Map.isEmpty children -> false
         | (None, Some children) ->
             children
             |> Map.map (fun p _ -> contains p bagColor)
             |> Map.toSeq
             |> Seq.map snd
             |> Seq.reduce (||)
+        | (Some _, _) -> true
         | _ -> false
     bagMap
     |> Map.filter (fun parent _ -> contains parent bagColor)
@@ -54,13 +53,11 @@ let canContain (bagMap: Map<string,Map<string,int>>) (bagColor: string) =
 
 let countBags (bagMap: Map<string,Map<string,int>>) (bagColor: string) =
     let rec sumChildren (parent: string) =
-        let childMap = Map.find parent bagMap
-        let directChildCount = childMap |> Map.toSeq |> Seq.sumBy snd
-        childMap
-        |> Map.map (fun bagName numBags -> numBags * (sumChildren bagName))
+        bagMap
+        |> Map.find parent 
+        |> Map.map (fun bagName numBags -> numBags + numBags * (sumChildren bagName))
         |> Map.toSeq
         |> Seq.sumBy snd
-        |> (+) directChildCount
     sumChildren bagColor
 
 [<EntryPoint>]
