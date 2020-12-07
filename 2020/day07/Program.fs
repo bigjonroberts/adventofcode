@@ -52,6 +52,17 @@ let canContain (bagMap: Map<string,Map<string,int>>) (bagColor: string) =
     |> Map.toSeq
     |> Seq.map fst
 
+let countBags (bagMap: Map<string,Map<string,int>>) (bagColor: string) =
+    let rec sumChildren (parent: string) =
+        let childMap = Map.find parent bagMap
+        let directChildCount = childMap |> Map.toSeq |> Seq.sumBy snd
+        childMap
+        |> Map.map (fun bagName numBags -> numBags * (sumChildren bagName))
+        |> Map.toSeq
+        |> Seq.sumBy snd
+        |> (+) directChildCount
+    sumChildren bagColor
+
 [<EntryPoint>]
 let main argv =
     let bagMap =
@@ -59,7 +70,12 @@ let main argv =
         |> readLines
         |> Seq.map ( parse >> (fun bag -> (bag.Name,bag.Contains)))
         |> Map.ofSeq
+
     canContain bagMap "shiny gold"
     |> Seq.length
-    |> printfn "Part 1: %i"  
-    0 // return an integer exit code
+    |> printfn "Part 1: %i"
+
+    countBags bagMap "shiny gold"
+    |> printfn "Part 2: %i"  
+
+    0
