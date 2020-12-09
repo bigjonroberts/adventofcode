@@ -20,7 +20,7 @@ let readLines (filePath:string) = seq {
 let rec boot accumulator (usedCodes: Set<int>) (instructionNumber: int) bootCode =
     match Array.tryItem instructionNumber bootCode with
     | None ->
-        if instructionNumber = (Array.length bootCode + 1) then
+        if instructionNumber = (Array.length bootCode) then
             accumulator
         else
             failwithf "Instruction number %i does not exist" instructionNumber
@@ -42,25 +42,50 @@ let rec boot accumulator (usedCodes: Set<int>) (instructionNumber: int) bootCode
 
 module Part2 =
 
-    type Flipped = Flipped of int
-
-    let findIndex flipped =
-        Array.tryFindIndex (
-            function
-            | NoOp _ -> false
-            | Jump (i, _)
-            | Accumulate (i, _) -> i > flipped
+    let flipNext startIndex bootCode =
+        let mutable flipped = false
+        bootCode
+        |> Array.map (fun operation ->
+            if not flipped then
+                match operation with
+                | NoOp (i, x) ->
+                    if i > startIndex then
+                        flipped <- true
+                        Jump (i, x)
+                    else operation
+                | Jump (i, x) ->
+                    if i > startIndex then
+                        flipped <- true
+                        NoOp (i, x)
+                    else operation
+                | Accumulate _ -> operation
+            else
+                operation
         )
 
-    let flipNext (Flipped flipped) bootCode =
-        match Array.tryItem flipped bootCode with
+    let rec boot accumulator (usedCodes: Set<int>) (instructionNumber: int) bootCode =
+        match Array.tryItem instructionNumber bootCode with
         | None ->
-            if flipped = -1 then
-                findIndex flipped
-        | Some (NoOp (i, x)) ->
-            Array.[i] <- Jump (i, x)
-        | Some (Jump (i,_)) ->
-        | Some (Accumulate _) -> bootCode
+            if instructionNumber = (Array.length bootCode) then
+                Some accumulator
+            else
+                failwithf "Instruction number %i does not exist" instructionNumber
+        | Some (Accumulate (i,x)) ->
+            if usedCodes.Contains i then
+                None
+            else
+                boot (accumulator + x) (Set.add i usedCodes) (instructionNumber + 1) bootCode
+        | Some (Jump (i,x)) ->
+            if usedCodes.Contains i then
+                None
+            else
+                boot accumulator (Set.add i usedCodes) (instructionNumber + x) bootCode
+        | Some (NoOp (i, _)) ->
+            if usedCodes.Contains i then
+                None
+            else
+                boot accumulator (Set.add i usedCodes) (instructionNumber + 1) bootCode
+
 
 [<EntryPoint>]
 let main argv =
@@ -70,7 +95,16 @@ let main argv =
         |> Seq.indexed
         |> Seq.map parse
         |> Array.ofSeq
+
     boot 0 Set.empty 0 bootCode
     |> printfn "Part 1: %i"
+
+    printfn "Instruction count: %i" (Array.length bootCode)
+    seq { 0 .. (Array.length bootCode - 1) }
+    |> Seq.choose (fun i ->
+        Part2.flipNext i bootCode
+        |> Part2.boot 0 Set.empty 0 )
+    |> Seq.head
+    |> printfn "Part 2: %i"
 
     0
