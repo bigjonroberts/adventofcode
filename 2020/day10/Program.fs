@@ -4,31 +4,31 @@ let readLines (filePath:string) = seq {
     while not sr.EndOfStream do
         yield sr.ReadLine () }
 
-let memoize fn =
-  let cache = new System.Collections.Generic.Dictionary<_,_>()
-  (fun x ->
-    match cache.TryGetValue x with
-    | true, v -> v
-    | false, _ -> let v = fn (x)
-                  cache.Add(x,v)
-                  v)
-
 let tribinacci =
+    let cache = new System.Collections.Generic.Dictionary<int, int64 seq>()
+    let rec trib i x last3 =
+        match cache.TryGetValue x with
+        | true, v -> v
+        | false, _ ->
+            let next3 = seq { yield! Seq.tail last3; yield Seq.sum last3 }
+            cache.Add (x,next3)
+            if i = x then
+                next3
+            else
+                trib (i+1) x next3
     function
     | 0 -> 0L
     | 1 -> 1L
     | 2 -> 2L
     | 3 -> 4L
     | x ->
-        let rec trib i last3 =
-            let nextVal = Seq.sum last3
-            if i = x then
-                nextVal
-            else
-                seq { yield! Seq.tail last3; yield nextVal }
-                |> trib (i+1)
-        [ 1L; 2L; 4L; ] |> trib 4
-    |> memoize
+        match cache.TryGetValue (x-1) with
+        | true, last3 ->
+            trib (x-1) x last3
+            |> Seq.last
+        | false, _ ->
+            trib 4 x [ 1L; 2L; 4L; ]
+            |> Seq.last
 
 [<EntryPoint>]
 let main argv =
