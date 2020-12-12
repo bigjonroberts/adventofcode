@@ -58,16 +58,53 @@ let move (state: State) (command: Command) =
         -> { state with Facing = West }
     | x -> failwithf "Invalid command: %O" x
 
+module Part2 =
+
+    type State = {
+        Position: int * int
+        Waypoint: int * int
+    }
+
+    let move (state: State) (command: Command) =
+        let (x, y) = state.Position
+        let (wx, wy) = state.Waypoint
+        match command with
+        | Forward n ->       { state with Position = (x + n*wx, y + n*wy) }
+        | Move (North, n) -> { state with Waypoint = (wx, wy + n) }
+        | Move (East, n) ->  { state with Waypoint = (wx + n, wy) }
+        | Move (South, n) -> { state with Waypoint = (wx, wy - n) }
+        | Move (West, n) ->  { state with Waypoint = (wx - n, wy) }
+        | Left  90 | Right 270 -> { state with Waypoint = (-1 * wy, wx) }
+        | Left 180 | Right 180 -> { state with Waypoint = (-1 * wx, -1 * wy) }
+        | Left 270 | Right  90 -> { state with Waypoint = (wy, -1 * wx) }
+        | x -> failwithf "Invalid command: %O" x
+
 [<EntryPoint>]
 let main argv =
 
-    "input"
-    |> readLines
-    |> Seq.map parse
-    |> Seq.fold move { Facing = East; Position = (0,0) }
-    |> fun state ->
-        let (x,y) = state.Position
+    let testinput =
+        seq { "F10"; "N3"; "F7"; "R90"; "F11" }
+        |> Seq.map parse
+        |> Seq.cache        
+
+    let input =
+        "input"
+        |> readLines
+        |> Seq.map parse
+        |> Seq.cache
+
+    let outputResult part (x,y) =
         abs x + abs y
-    |> printfn "Part 1: %i"
+        |> printfn "Part %i: %i" part
+
+    input
+    |> Seq.fold move { Facing = East; Position = (0,0) }
+    |> fun state -> state.Position
+    |> outputResult 1
+
+    input
+    |> Seq.fold Part2.move { Position = (0,0); Waypoint = (10,1) }
+    |> fun state -> state.Position
+    |> outputResult 2
 
     0
