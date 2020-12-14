@@ -63,6 +63,23 @@ module Part2 =
             |> write (setBit '1') tail value
         | [] -> Map.add (System.Convert.ToUInt64(System.String.Concat address, 2)) value prog
 
+    let rec private calcAddress (floating: Option<int list>) (address: char seq) = seq {
+        match floating with
+        | None ->
+            let floating =
+                address
+                |> Seq.indexed
+                |> Seq.filter (snd >> (fun c -> c = 'X'))
+                |> Seq.map fst
+                |> List.ofSeq
+            yield! calcAddress (Some floating) address
+        | Some (x :: tail) ->
+            let setBit value = address |> Seq.mapi (fun i c -> if i = x then value else c)
+            yield! calcAddress (Some tail) (setBit '0')
+            yield! calcAddress (Some tail) (setBit '1')
+        | Some [] -> yield System.String.Concat address
+    }
+
     let apply (prog: Map<uint64,uint64>) (instruction: Register) =
         seq {
             yield! (instruction.Address, 2) |> System.Convert.ToString |> Seq.rev
@@ -71,14 +88,8 @@ module Part2 =
         |> Seq.rev
         |> Seq.zip instruction.Mask
         |> Seq.map (fun (m,c) -> match m with | '0' -> c | x -> x)
-        |> fun address ->
-            let floating =
-                address
-                |> Seq.indexed
-                |> Seq.filter (snd >> (fun c -> c = 'X'))
-                |> Seq.map fst
-                |> List.ofSeq
-            write address floating instruction.Value prog
+        |> calcAddress None
+        |> Seq.fold (fun prog address -> Map.add (System.Convert.ToUInt64(address, 2)) instruction.Value prog) prog
 
     let testInput = seq {
         "mask = 000000000000000000000000000000X1001X"
