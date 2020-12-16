@@ -4,7 +4,7 @@ let readLines (filePath:string) = seq {
     while not sr.EndOfStream do
         yield sr.ReadLine () }
 
-let tribinacci =
+let tribinacci () =
     let cache = new System.Collections.Generic.Dictionary<int, int64 seq>()
     let rec trib i x last3 =
         match cache.TryGetValue x with
@@ -51,6 +51,7 @@ let main argv =
     |> Seq.reduce (*)
     |> printfn "Part 1: %i"
 
+    let tribinacci = tribinacci () // initializes cache
 
     input
     |> Seq.sort
